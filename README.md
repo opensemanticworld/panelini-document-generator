@@ -13,6 +13,9 @@ Document Generator allows you to:
 - Preview generated documents as PDFs
 - Download all generated documents as a ZIP file
 
+![Document Generator Screenshot](./docs/screenshot_full.png)
+
+
 ## 🚀 Quick Start
 
 ### Prerequisites
