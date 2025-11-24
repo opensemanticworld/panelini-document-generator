@@ -10,3 +10,5 @@ wheels/
 .venv
 # environment variables
 .env
+# local settings
+docker-compose.override.yml

@@ -1,0 +1,14 @@
+
+services:
+  document-generator:
+    image: opensemanticworld/document-generator
+    build:
+      context: ./
+    container_name: document-generator
+    restart: unless-stopped
+    # volumes:
+    #   - ./:/app
+    # env_file:
+    #   - .env
+    # options see https://panel.holoviz.org/how_to/server/commandline.html
+    # command: ["uv", "run", "panel", "serve", "src/document-generator/main.py", "--address", "0.0.0.0", "--port", "80", "--static-dirs", "assets=.venv/lib/python3.12/site-packages/panelini/assets", "--ico-path", ".venv/lib/python3.12/site-packages/panelini/assets/favicon.ico"]
