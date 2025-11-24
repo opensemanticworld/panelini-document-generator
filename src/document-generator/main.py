@@ -137,11 +137,42 @@ class DocumentGeneratorApp:
 
             # trim whitespace from column names
             self.excel_data.columns = self.excel_data.columns.str.strip()
+
+            original_columns = self.excel_data.columns.tolist()
+            # make all column names valid python identifiers
+            # replace spaces and hyphens with underscores
+            # add underscore prefix if column name starts with a digit
+            # replace duplicate names with suffixes
+            valid_columns = []
+            seen = {}
+            for col in original_columns:
+                valid_col = col.strip().replace(' ', '_').replace('-', '_')
+                # umlauts are allowed
+                # valid_col = valid_col.replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')
+                if valid_col[0].isdigit():
+                    valid_col = '_' + valid_col
+                # replace all remaining invalid characters
+                valid_col = ''.join(c if c.isalnum() or c == '_' else '_' for c in valid_col)
+                if valid_col in seen:
+                    seen[valid_col] += 1
+                    valid_col = f"{valid_col}_{seen[valid_col]}"
+                else:
+                    seen[valid_col] = 0
+                valid_columns.append(valid_col)
+            
+            # Update columns with valid names
+            self.excel_data.columns = valid_columns
+            self.excel_data = self.excel_data.loc[:, ~self.excel_data.columns.duplicated()]
             
             # Update table
             self.data_table.value = self.excel_data
             
-            self.status.object = f'✅ Loaded {len(self.excel_data)} rows'
+            status_msg = f'✅ Loaded {len(self.excel_data)} rows'
+            for orig, valid in zip(original_columns, valid_columns):
+                if orig != valid:
+                    status_msg += f'\n- Warning: Column renamed: "{orig}" -> "{valid}"; use "{{{{ {valid} }}}}" in templates.'
+            self.status.object = status_msg
+            
             self._update_button_states()
             
             pn.state.notifications.success(

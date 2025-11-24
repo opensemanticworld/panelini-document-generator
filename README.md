@@ -131,6 +131,13 @@ Your invoice number is {{ Invoice_Number }}.
 Total: {{ Amount }} EUR
 ```
 
+### Valid Variable Names
+
+Variable names must not contain spaces or special characters except underscores. 
+Column names will automatically be converted to valid variable names by replacing spaces with underscores and removing special characters.
+The status message on the left will inform you of any changes made to column names and which names to use in your templates.
+![status message on renamed columns](docs/screenshot_status_message_renamed_columns.png)
+
 ### Advanced Features
 
 **Conditional Content:**
