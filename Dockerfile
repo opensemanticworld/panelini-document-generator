@@ -23,5 +23,3 @@ COPY . /app
 
 # Sync the project
 RUN uv sync --frozen
-
-CMD [ "uv", "run", "panel", "serve", "src/document-generator/main.py", "--address", "0.0.0.0", "--port", "80", "--static-dirs", "assets=.venv/lib/python3.12/site-packages/panelini/assets", "--ico-path", ".venv/lib/python3.12/site-packages/panelini/assets/favicon.ico"]
