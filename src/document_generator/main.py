@@ -882,4 +882,7 @@ app.main_set(objects=doc_gen.get_main())
 app.servable()
 
 if __name__ == "__main__":
-    pn.serve(app, port=int(os.getenv("INTERNAL_PORT")))
+    external_port = os.getenv("EXTERNAL_PORT", os.getenv("INTERNAL_PORT"))
+    print(f"Service reachable at: http://localhost:{external_port}", flush=True)
+    print("Note: If a reverse proxy (e.g. Caddy) is configured, the public URL may differ.", flush=True)
+    pn.serve(app, port=int(os.getenv("INTERNAL_PORT")), address="0.0.0.0")

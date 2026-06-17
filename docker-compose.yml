@@ -22,7 +22,7 @@ services:
     # todo: check why the logs are not shown in docker logs
     # For local testing only, comment out in production
     ports:
-      - "${INTERNAL_PORT}:${EXTERNAL_PORT}"
+      - "${EXTERNAL_PORT}:${INTERNAL_PORT}"
 
 volumes:
   document_generator_venv:
