@@ -47,6 +47,7 @@ class DocumentGeneratorApp:
         # Data storage
         self.excel_data: pd.DataFrame = None
         self.templates: List[Dict[str, Any]] = []
+        self._is_generating = False
 
         # Widgets
         self._create_widgets()
@@ -313,13 +314,25 @@ class DocumentGeneratorApp:
             else False
         )
 
-        self.preview_btn.disabled = not (has_data and has_templates and has_selection)
-        self.word_download_btn.disabled = not (has_data and has_templates and has_selection)
-        self.word_file_download.disabled = not (has_data and has_templates and has_selection)
-        self.pdf_download_btn.disabled = not (has_data and has_templates and has_selection)
-        self.pdf_file_download.disabled = not (has_data and has_templates and has_selection)
-        self.all_formats_download_btn.disabled = not (has_data and has_templates and has_selection)
-        self.all_formats_download.disabled = not (has_data and has_templates and has_selection)
+        can_act = has_data and has_templates and has_selection and not self._is_generating
+
+        self.preview_btn.disabled = not can_act
+        self.word_download_btn.disabled = not can_act
+        self.word_file_download.disabled = not can_act
+        self.pdf_download_btn.disabled = not can_act
+        self.pdf_file_download.disabled = not can_act
+        self.all_formats_download_btn.disabled = not can_act
+        self.all_formats_download.disabled = not can_act
+
+    def _guard_generating(self) -> bool:
+        """Returns True and notifies the user if generation is already running."""
+        if self._is_generating:
+            pn.state.notifications.warning(
+                "Please wait until the current process finishes before clicking another button."
+            )
+            self.status.object = "⏳ Generation in progress — please wait."
+            return True
+        return False
 
     @staticmethod
     def _create_empty_zip() -> io.BytesIO:
@@ -465,7 +478,11 @@ class DocumentGeneratorApp:
 
     def _preview_documents(self, event):
         """Generate and preview PDFs for selected rows"""
+        if self._guard_generating():
+            return
         try:
+            self._is_generating = True
+            self._update_button_states()
             self.status.object = "⏳ Generating previews ..."
             self.pdf_preview_area.clear()
 
@@ -541,6 +558,9 @@ class DocumentGeneratorApp:
         except Exception as e:
             self.status.object = f"❌ Error: {str(e)}"
             pn.state.notifications.error(f"Error generating previews: {str(e)}")
+        finally:
+            self._is_generating = False
+            self._update_button_states()
 
     def _trigger_download(self, event, file_format: FileFormat = FileFormat.WORD):
         """Trigger the file download widget"""
@@ -738,42 +758,54 @@ class DocumentGeneratorApp:
         return DocumentGeneratorApp._create_empty_zip()
 
     def _download_word_documents(self) -> io.BytesIO:
-        """
-        Generate and return Word documents for selected rows as ZIP
-        This is a callback for FileDownload widget
-
-        Returns:
-            BytesIO object containing ZIP file
-        """
-        results = self._download_documents(as_pdf=False)
-        return self._get_zip_buffer(file_format=FileFormat.WORD, zip_infos=results)
+        if self._guard_generating():
+            return DocumentGeneratorApp._create_empty_zip()
+        try:
+            self._is_generating = True
+            self._update_button_states()
+            self.status.object = "⏳ Generating Word documents ..."
+            results = self._download_documents(as_pdf=False)
+            return self._get_zip_buffer(file_format=FileFormat.WORD, zip_infos=results)
+        finally:
+            self._is_generating = False
+            self._update_button_states()
 
     def _download_pdf_documents(self) -> io.BytesIO:
-        """
-        Generate and return PDF documents for selected rows as ZIP
-        This is a callback for FileDownload widget
-
-        Returns:
-            BytesIO object containing ZIP file
-        """
-        results = self._download_documents(as_pdf=True)
-        return self._get_zip_buffer(file_format=FileFormat.PDF, zip_infos=results)
+        if self._guard_generating():
+            return DocumentGeneratorApp._create_empty_zip()
+        try:
+            self._is_generating = True
+            self._update_button_states()
+            self.status.object = "⏳ Generating PDF documents ..."
+            results = self._download_documents(as_pdf=True)
+            return self._get_zip_buffer(file_format=FileFormat.PDF, zip_infos=results)
+        finally:
+            self._is_generating = False
+            self._update_button_states()
 
     def _download_all_formats(self) -> io.BytesIO:
-        # Create a temporary ZIP containing both Word and PDF ZIPs
-        logger.info("Creating combined Word + PDF download")
-        results = self._download_documents(as_pdf=True)
-        combined_zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(combined_zip_buffer, "w", zipfile.ZIP_DEFLATED) as combined_zip:
-            for result in results:
-                result["zip_buffer"].seek(0)  # Defensive: ensure buffer at start
-                combined_zip.writestr(
-                    f"documents_{result['file_format']}.zip",
-                    result["zip_buffer"].read()
-                )
-        combined_zip_buffer.seek(0)
-        logger.info(f"Created combined ZIP: {combined_zip_buffer.tell()} bytes")
-        return combined_zip_buffer
+        if self._guard_generating():
+            return DocumentGeneratorApp._create_empty_zip()
+        try:
+            self._is_generating = True
+            self._update_button_states()
+            self.status.object = "⏳ Generating Word & PDF documents ..."
+            logger.info("Creating combined Word + PDF download")
+            results = self._download_documents(as_pdf=True)
+            combined_zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(combined_zip_buffer, "w", zipfile.ZIP_DEFLATED) as combined_zip:
+                for result in results:
+                    result["zip_buffer"].seek(0)
+                    combined_zip.writestr(
+                        f"documents_{result['file_format']}.zip",
+                        result["zip_buffer"].read()
+                    )
+            combined_zip_buffer.seek(0)
+            logger.info(f"Created combined ZIP: {combined_zip_buffer.getbuffer().nbytes} bytes")
+            return combined_zip_buffer
+        finally:
+            self._is_generating = False
+            self._update_button_states()
 
     def get_sidebar(self):
         """Get sidebar components"""
