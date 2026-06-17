@@ -26,6 +26,9 @@ python src/document_generator/main.py
 
 # Run with Panel's hot reload (alternative)
 panel serve src/document_generator/main.py --port 5010 --dev
+
+# Debug in IDE (PyCharm/VSCode) — run this script, not main.py
+python src/document_generator/run_debug.py
 ```
 
 ### Docker Commands
@@ -71,6 +74,9 @@ The application is implemented as a single-file monolith in `src/document_genera
    - `_download_word_documents()`: Callback for Word-only download (uses `_download_documents(as_pdf=False)`)
    - `_download_pdf_documents()`: Callback for PDF-only download (uses `_download_documents(as_pdf=True)`)
    - `_download_all_formats()`: Callback for combined download (creates nested ZIP with both formats)
+   - `_guard_generating()`: Returns True if generation is in progress; all action callbacks call this first to prevent concurrent runs
+   - `_get_output_filename()`: Generates output filenames from per-template naming templates (Jinja2-rendered)
+   - `_get_zip_buffer()`: Static helper that extracts the correct BytesIO from a list of ZipFileInfo by format; returns empty ZIP if not found
    - `_create_empty_zip()`: Static helper that creates valid empty ZIP files
    - `_create_zip_file_info()`: Helper for creating ZipFileInfo TypedDict instances
    - `get_sidebar()` / `get_main()`: Returns UI components for layout
@@ -104,7 +110,7 @@ The application is implemented as a single-file monolith in `src/document_genera
 
 ### Excel Column Name Sanitization
 
-The app automatically sanitizes Excel column names to be valid Python identifiers (src/document_generator/main.py:186-226):
+The app automatically sanitizes Excel column names to be valid Python identifiers (src/document_generator/main.py:180-240):
 - Strips whitespace from column names
 - Replaces spaces and hyphens with underscores
 - Adds underscore prefix if column name starts with a digit
@@ -126,7 +132,7 @@ Templates are rendered with a dictionary of row data where all values are conver
 
 ### PDF Conversion
 
-LibreOffice headless mode is used for Word → PDF conversion (src/document_generator/main.py:369-420):
+LibreOffice headless mode is used for Word → PDF conversion (src/document_generator/main.py:390-441):
 - Command: `libreoffice --headless --convert-to pdf <input> --outdir <dir>`
 - Subprocess with configurable timeout (default 60 seconds, configurable via `CONVERSION_TIMEOUT` env var)
 - Temporary files are created and cleaned up after conversion in `finally` blocks
@@ -154,7 +160,7 @@ From recent commit (c8f0c6b): The app uses `python src/document_generator/main.p
 
 ### FileDownload Widget Pattern
 
-The app uses three Panel `FileDownload` widgets (lines 100-132) with callbacks that return `io.BytesIO` objects:
+The app uses three Panel `FileDownload` widgets (lines ~55-155) with callbacks that return `io.BytesIO` objects:
 
 1. **`word_file_download`**: Downloads `documents_word.zip` containing only Word (.docx) files
    - Callback: `_download_word_documents()` → calls `_download_documents(as_pdf=False)`
@@ -167,20 +173,22 @@ The app uses three Panel `FileDownload` widgets (lines 100-132) with callbacks t
    - Callback: `_download_all_formats()` → creates nested ZIP structure
    - Contains `documents_word.zip` and `documents_pdf.zip` inside
 
-**Core Implementation**: The `_download_documents(as_pdf: bool)` method (lines 559-710) is the workhorse that:
+**Core Implementation**: The `_download_documents(as_pdf: bool)` method (lines 580-743) is the workhorse that:
 - Validates templates and selection early (returns valid empty ZIPs if validation fails)
 - Generates Word documents for all (template × row) combinations
 - Optionally converts to PDF if `as_pdf=True`
 - Returns a list of `ZipFileInfo` dicts containing format type and BytesIO buffer
 - Tracks PDF conversion failures individually without stopping the entire process
 
-**Empty ZIP Handling**: The helper `_create_empty_zip()` (lines 319-326) ensures that even when no documents are generated (validation failures, errors, no selection), the download returns a valid empty ZIP file instead of a corrupted/invalid BytesIO object.
+**Empty ZIP Handling**: The helper `_create_empty_zip()` (lines 337-344) ensures that even when no documents are generated (validation failures, errors, no selection), the download returns a valid empty ZIP file instead of a corrupted/invalid BytesIO object.
+
+**Note on legacy buttons**: Three `pn.widgets.Button` instances (`word_download_btn`, `pdf_download_btn`, `all_formats_download_btn`) exist with `visible=False` and are currently unused. The active download mechanism uses the `FileDownload` widgets instead.
 
 ### Error Handling and Resilience
 
 The application implements robust error handling to ensure partial failures don't crash the entire process:
 
-**PDF Conversion Failures** (lines 646-663):
+**PDF Conversion Failures** (lines ~665-690):
 - Each PDF conversion is wrapped in a try-except block
 - Failures are logged and tracked in a `conversion_failures` list
 - Processing continues for remaining documents
@@ -188,7 +196,7 @@ The application implements robust error handling to ensure partial failures don'
 - Word documents are still generated successfully even if PDF conversion fails
 - Detailed error information is logged for debugging
 
-**Early Validation** (lines 571-580):
+**Early Validation** (lines ~595-605):
 - Checks for uploaded templates before attempting document generation
 - Checks for row selection before processing
 - Returns valid empty ZIPs with appropriate error notifications if validation fails
@@ -211,7 +219,19 @@ All document generation uses temporary files/directories that are cleaned up in 
 
 ### Button State Management
 
-`_update_button_states()` is called whenever data/templates/selection changes to enable/disable action buttons based on application state.
+`_update_button_states()` is called whenever data/templates/selection changes to enable/disable action buttons based on application state. It also checks `self._is_generating` — all action buttons are disabled while generation is running.
+
+### Generation Lock Pattern
+
+All action callbacks (`_download_word_documents`, `_download_pdf_documents`, `_download_all_formats`, `_preview_documents`) use the same pattern:
+1. Call `_guard_generating()` first — returns empty ZIP / exits early if already running
+2. Set `self._is_generating = True` and call `_update_button_states()` to lock buttons
+3. Do work
+4. In `finally`: reset `self._is_generating = False` and call `_update_button_states()` to unlock
+
+Any new action button must follow this pattern.
+
+The module-level `app = Panelini(...)` object (line 869) is importable — `run_debug.py` imports it directly to serve with `pn.serve()`.
 
 ## Docker Deployment
 
