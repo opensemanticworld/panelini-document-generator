@@ -8,5 +8,5 @@ dependencies = [
     "docxtpl>=0.20.2",
     "dotenv>=0.9.9",
     "openpyxl>=3.1.5",
-    "panelini>=0.6.4",
+    "panelini>=0.7.0",
 ]

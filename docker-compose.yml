@@ -5,14 +5,24 @@ services:
       context: ./
     container_name: document-generator
     restart: unless-stopped
-    # volumes:
-    #   - ./:/app
-    # env_file:
-    #   - .env
+    volumes:
+      # Mount only source code for live updates, but keep the image's /app/.venv intact
+      - ./src:/app/src
+      # Optional: persist the venv across container recreations (and avoid any fs oddities)
+      - document_generator_venv:/app/.venv
+    env_file:
+      - .env
     # options see https://panel.holoviz.org/how_to/server/commandline.html
     command:
-      - "/app/.venv/bin/python"
-      - "src/document_generator/main.py"
+      - "uv"
+      - "run"
+      - "python"
+      - "-u"
+      - "/app/src/document_generator/main.py"
+    # todo: check why the logs are not shown in docker logs
     # For local testing only, comment out in production
-    # ports:
-    #   - "5010:5010"
+    ports:
+      - "${INTERNAL_PORT}:${EXTERNAL_PORT}"
+
+volumes:
+  document_generator_venv:
