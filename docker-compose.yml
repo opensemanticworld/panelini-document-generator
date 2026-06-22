@@ -1,4 +1,3 @@
-
 services:
   document-generator:
     image: opensemanticworld/document-generator
@@ -6,9 +5,24 @@ services:
       context: ./
     container_name: document-generator
     restart: unless-stopped
-    # volumes:
-    #   - ./:/app
-    # env_file:
-    #   - .env
+    volumes:
+      # Mount only source code for live updates, but keep the image's /app/.venv intact
+      - ./src:/app/src
+      # Optional: persist the venv across container recreations (and avoid any fs oddities)
+      - document_generator_venv:/app/.venv
+    env_file:
+      - .env
     # options see https://panel.holoviz.org/how_to/server/commandline.html
-    # command: ["uv", "run", "panel", "serve", "src/document-generator/main.py", "--address", "0.0.0.0", "--port", "80", "--static-dirs", "assets=.venv/lib/python3.12/site-packages/panelini/assets", "--ico-path", ".venv/lib/python3.12/site-packages/panelini/assets/favicon.ico"]
+    command:
+      - "uv"
+      - "run"
+      - "python"
+      - "-u"
+      - "/app/src/document_generator/main.py"
+    # todo: check why the logs are not shown in docker logs
+    # For local testing only, comment out in production
+    ports:
+      - "${EXTERNAL_PORT}:${INTERNAL_PORT}"
+
+volumes:
+  document_generator_venv:

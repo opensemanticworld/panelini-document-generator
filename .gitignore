@@ -12,3 +12,8 @@ wheels/
 .env
 # local settings
 docker-compose.override.yml
+
+
+# IDE specific files
+.idea
+.vscode

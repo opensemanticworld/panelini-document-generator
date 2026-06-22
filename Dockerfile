@@ -19,9 +19,7 @@ COPY pyproject.toml /app/pyproject.toml
 RUN uv sync --frozen --no-install-project
 
 # Copy the project into the image
-COPY . /app
+COPY ./src /app/src
 
 # Sync the project
 RUN uv sync --frozen
-
-CMD [ "uv", "run", "panel", "serve", "src/document-generator/main.py", "--address", "0.0.0.0", "--port", "80", "--static-dirs", "assets=.venv/lib/python3.12/site-packages/panelini/assets", "--ico-path", ".venv/lib/python3.12/site-packages/panelini/assets/favicon.ico"]

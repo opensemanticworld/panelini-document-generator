@@ -6,6 +6,7 @@ A Python Panel application for generating personalized documents by merging Exce
 ## 📋 Overview
 
 Document Generator allows you to:
+
 - Upload Excel spreadsheets containing your data
 - Upload one or more Word document templates
 - Select specific rows to process
@@ -14,7 +15,6 @@ Document Generator allows you to:
 - Download all generated documents as a ZIP file
 
 ![Document Generator Screenshot](./docs/screenshot_full.png)
-
 
 ## 🚀 Quick Start
 
@@ -29,7 +29,7 @@ Document Generator allows you to:
 ```bash
 # Clone the repository
 git clone 
-cd document-generator
+cd document_generator
 
 # Install dependencies
 uv sync
@@ -52,13 +52,10 @@ CONVERSION_TIMEOUT=60
 ### Running the App
 
 ```bash
-# Using UV (recommended)
-uv run panel serve .\src\document-generator\main.py --dev --port 5006 --static-dirs assets=".venv/Lib/site-packages/panelini/assets" --ico-path .venv/Lib/site-packages/panelini/assets/favicon.ico
-
-# Using Python directly
+# Using Python directly (recommended)
 python main.py
 
-# Or with panel serve
+# Or with panel serve (for hot reload development)
 panel serve main.py --port 5010 --dev
 ```
 
@@ -74,6 +71,7 @@ Access the app at: `http://localhost:5010`
 4. Select rows you want to process using the checkboxes
 
 **Excel Requirements:**
+
 - First row should contain column headers
 - Column names will be used as template variables
 
@@ -89,17 +87,20 @@ Access the app at: `http://localhost:5010`
 In the **Templates Configuration** table, edit the **Naming Template** column to customize output filenames.
 
 **Syntax:**
-```
+
+```txt
 prefix_{{ column_name }}_suffix
 ```
 
 **Example:**
-```
+
+```txt
 Invoice_{{ Customer_ID }}_{{ Year }}
 ```
 
 For a row with `Customer_ID=12345` and `Year=2024`, generates:
-```
+
+```txt
 Invoice_12345_2024.docx
 ```
 
@@ -124,7 +125,7 @@ Document Generator uses [python-docx-template](https://docxtpl.readthedocs.io/) 
 
 In your Word template, use double curly braces:
 
-```
+```txt
 Dear {{ Customer_Name }},
 
 Your invoice number is {{ Invoice_Number }}.
@@ -133,7 +134,7 @@ Total: {{ Amount }} EUR
 
 ### Valid Variable Names
 
-Variable names must not contain spaces or special characters except underscores. 
+Variable names must not contain spaces or special characters except underscores.
 Column names will automatically be converted to valid variable names by replacing spaces with underscores and removing special characters.
 The status message on the left will inform you of any changes made to column names and which names to use in your templates.
 ![status message on renamed columns](docs/screenshot_status_message_renamed_columns.png)
@@ -141,23 +142,25 @@ The status message on the left will inform you of any changes made to column nam
 ### Advanced Features
 
 **Conditional Content:**
-```
+
+```txt
 {% if Premium_Customer %}
 Thank you for being a premium customer!
 {% endif %}
 ```
 
 **Formatting:**
-```
+
+```txt
 Date: {{ Date | date_format }}
 Amount: {{ Amount | currency }}
 ```
 
 **Excel Column Matching:**
+
 - Template variable names must exactly match Excel column names (case-sensitive)
 - Spaces in column names are preserved: `{{ First Name }}`
 - Leading/trailing whitespace is automatically trimmed
-
 
 ## 🛠️ Technical Details
 
@@ -194,7 +197,8 @@ Amount: {{ Amount | currency }}
 **Error:** `LibreOffice conversion failed`
 
 **Solution:**
-1. Install LibreOffice: https://www.libreoffice.org/download/
+
+1. Install LibreOffice: [https://www.libreoffice.org/download/](https://www.libreoffice.org/download/)
 2. Update `LIBREOFFICE_PATH` in `.env` with the correct path
 3. Test manually: `libreoffice --version`
 
@@ -203,6 +207,7 @@ Amount: {{ Amount | currency }}
 **Problem:** Variables show as `{{ Variable_Name }}` in output
 
 **Solution:**
+
 - Ensure Excel column names exactly match template variables
 - Check for extra spaces in column names
 - Variable names are case-sensitive
@@ -212,6 +217,7 @@ Amount: {{ Amount | currency }}
 **Problem:** PDF preview fails or times out
 
 **Solution:**
+
 - Increase `CONVERSION_TIMEOUT` in `.env`
 - Ensure LibreOffice is not running in normal mode
 - Check system resources (CPU/memory)
@@ -221,6 +227,7 @@ Amount: {{ Amount | currency }}
 **Problem:** Error loading Excel file
 
 **Solution:**
+
 - Ensure file is valid `.xlsx` or `.xls` format
 - Check for merged cells (may cause issues)
 - Verify first row contains headers
@@ -236,11 +243,12 @@ Amount: {{ Amount | currency }}
 
 This project is licensed under the **Apache License 2.0**.
 
-See the [LICENSE](LICENSE) file for details or visit: https://www.apache.org/licenses/LICENSE-2.0
+See the [LICENSE](LICENSE) file for details or visit: [Apache License](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
@@ -252,5 +260,3 @@ Please ensure your code follows the existing style and includes appropriate test
 ## 📧 Support
 
 For questions or issues, please [open an issue](link-to-issues) on GitHub.
-
-
